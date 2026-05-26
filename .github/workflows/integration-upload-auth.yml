@@ -1,0 +1,76 @@
+name: Integration — Upload auth
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  upload-auth:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: npx prisma generate
+      - name: Push DB schema
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: npx prisma db push
+      - name: Build
+        run: npm run build
+      - name: Start server
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          ALLOW_DEV_BOOTSTRAP_CONTEXT: false
+          INTERNAL_AUTH_SECRET: ci-secret
+        run: |
+          nohup npm run start &
+          # wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -sS http://localhost:3000 > /dev/null; then
+              echo Server is up
+              break
+            fi
+            sleep 1
+          done
+      - name: Expect 401 without trusted header
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/api/documents/upload -F "title=ci-test")
+          echo "Response status: $status"
+          if [ "$status" -ne 401 ]; then
+            echo "Expected 401 when no trusted header is provided"
+            exit 1
+          fi
+      - name: Expect 200 with trusted header (dev bootstrap disabled)
+        env:
+          INTERNAL_AUTH_SECRET: ci-secret
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/api/documents/upload -H "x-internal-auth: ci-secret" -H "x-user-email: owner@nexus.local" -H "x-workspace-slug: default-workspace" -F "title=ci-test")
+          echo "Response status with headers: $status"
+          if [ "$status" -eq 401 ]; then
+            echo "Unexpected 401 even with trusted headers"
+            exit 1
+          fi
