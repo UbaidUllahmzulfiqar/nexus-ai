@@ -60,6 +60,7 @@ model Document {
   mimeType      String
   content       String?
   summary       String?
+  processingError String?
   status        DocumentStatus @default(UPLOADED)
   sizeBytes     Int?
   chunkCount    Int            @default(0)
@@ -106,7 +107,7 @@ enum WorkspaceRole {
 enum DocumentStatus {
   UPLOADED
   PROCESSING
-  READY
+  COMPLETE
   FAILED
 }
 

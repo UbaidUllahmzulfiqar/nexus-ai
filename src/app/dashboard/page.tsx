@@ -1,105 +1,130 @@
-const stats = [
-  { label: "Workspaces", value: "4" },
-  { label: "Documents", value: "18" },
-  { label: "Conversations", value: "31" },
-];
+import Link from 'next/link';
+import type { DocumentStatus } from '@prisma/client';
+import { redirect } from 'next/navigation';
+import { DocumentStatusBadge } from '../../components/dashboard/document-status-badge';
+import getServerSession from '../../lib/session';
+import { resolveDashboardContext, listWorkspaceDocuments } from '../../lib/dashboard-context';
 
-const activity = [
-  "Summarized a board deck and saved 7 action items.",
-  "Processed 3 PDF uploads into searchable chunks.",
-  "Generated a workspace answer with grounded citations.",
-];
+function formatDate(value: Date) {
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(value);
+}
 
-export default function DashboardPage() {
+function formatBytes(value: number | null) {
+  if (!value) return 'Unknown size';
+
+  const megabytes = value / (1024 * 1024);
+  return megabytes >= 1
+    ? `${megabytes.toFixed(1)} MB`
+    : `${Math.max(1, Math.round(value / 1024))} KB`;
+}
+
+export default async function DashboardPage() {
+  const session = await getServerSession();
+
+  if (!session?.user?.email) {
+    redirect('/login');
+  }
+
+  const context = await resolveDashboardContext(session.user.email);
+  const documents = await listWorkspaceDocuments(context.workspaceId);
+
+  const counts = documents.reduce(
+    (accumulator, document) => {
+      accumulator.total += 1;
+      accumulator[document.status] += 1;
+      return accumulator;
+    },
+    {
+      total: 0,
+      UPLOADED: 0,
+      PROCESSING: 0,
+      COMPLETE: 0,
+      FAILED: 0,
+    } as Record<'total' | DocumentStatus, number>
+  );
+
   return (
-    <main className="app-shell">
-      <div className="page">
-        <header className="nav">
-          <div className="brand">
-            <span className="brand-mark" aria-hidden="true" />
-            NexusAI Dashboard
+    <div className="dashboard-content-grid">
+      <section className="panel dashboard-card">
+        <div className="surface-header">
+          <div>
+            <p className="dashboard-kicker">Workspace</p>
+            <h2 className="section-title">{context.workspaceName}</h2>
+            <p className="section-copy">
+              Documents are scoped to this workspace and tied to the authenticated account that owns
+              the session.
+            </p>
           </div>
-          <div className="nav-links">
-            <span>Signed in as Demo User</span>
-            <a href="/">Home</a>
-          </div>
-        </header>
-
-        <div className="dashboard">
-          <aside className="panel sidebar">
-            <h3>Workspace</h3>
-            <p className="section-copy">Product Launch Ops</p>
-            <nav className="sidebar-nav" aria-label="Workspace navigation">
-              <a className="active" href="/dashboard">
-                Overview <span>12</span>
-              </a>
-              <span>
-                Documents <span>18</span>
-              </span>
-              <span>
-                Chats <span>31</span>
-              </span>
-              <span>
-                Search <span>Semantic</span>
-              </span>
-              <span>
-                Settings <span>Team</span>
-              </span>
-            </nav>
-          </aside>
-
-          <section className="dashboard-main">
-            <div className="panel surface">
-              <div className="surface-header">
-                <div>
-                  <h2 className="section-title">Workspace overview</h2>
-                  <p className="section-copy">
-                    The first implementation slice focuses on the shell, data
-                    model, and AI-ready document workflow.
-                  </p>
-                </div>
-                <a className="button" href="/dashboard/upload">
-                  Upload document
-                </a>
-              </div>
-
-              <div className="mini-grid">
-                {stats.map((stat) => (
-                  <div className="mini-card" key={stat.label}>
-                    <strong>{stat.value}</strong>
-                    <span>{stat.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="panel surface">
-              <h3 className="section-title">Recent activity</h3>
-              <div className="timeline" style={{ marginTop: "0.9rem" }}>
-                {activity.map((item) => (
-                  <div className="timeline-item" key={item}>
-                    <span>{item}</span>
-                    <span className="tag">Live</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="panel surface">
-              <h3 className="section-title">Implementation focus</h3>
-              <p className="section-copy">
-                Next steps are auth, file upload, text extraction, chunking,
-                embeddings, and chat over documents. This page is the product
-                shell that those features will fill.
-              </p>
-              <p className="footer-note">
-                The backend is not wired yet, so this dashboard is intentionally
-                a static product scaffold for now.
-              </p>
-            </div>
-          </section>
+          <Link className="button" href="/dashboard/upload">
+            Upload PDF
+          </Link>
         </div>
-      </div>
-    </main>
+
+        <div className="mini-grid dashboard-stats">
+          <div className="mini-card">
+            <strong>{counts.total}</strong>
+            <span>Documents</span>
+          </div>
+          <div className="mini-card">
+            <strong>{counts.PROCESSING + counts.UPLOADED}</strong>
+            <span>In progress</span>
+          </div>
+          <div className="mini-card">
+            <strong>{counts.COMPLETE}</strong>
+            <span>Complete</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel dashboard-card">
+        <div className="surface-header">
+          <div>
+            <p className="dashboard-kicker">Documents</p>
+            <h2 className="section-title">Workspace-scoped document list</h2>
+          </div>
+          <Link className="ghost-button" href="/dashboard/upload">
+            Add document
+          </Link>
+        </div>
+
+        {documents.length === 0 ? (
+          <div className="dashboard-empty-list">
+            <p>No documents yet. Upload a PDF to create the first record in this workspace.</p>
+            <Link className="button" href="/dashboard/upload">
+              Upload a document
+            </Link>
+          </div>
+        ) : (
+          <div className="document-list">
+            {documents.map((document) => (
+              <Link
+                className="document-row"
+                href={`/dashboard/documents/${document.id}`}
+                key={document.id}
+              >
+                <div className="document-row-main">
+                  <div>
+                    <strong>{document.title}</strong>
+                    <p>{document.fileName}</p>
+                    {document.summary ? <p>{document.summary.slice(0, 140)}</p> : null}
+                  </div>
+                  <span className="document-row-meta">
+                    Updated {formatDate(document.updatedAt)}
+                  </span>
+                </div>
+                <div className="document-row-footer">
+                  <DocumentStatusBadge status={document.status} />
+                  <span>{formatBytes(document.sizeBytes)}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

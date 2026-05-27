@@ -6,10 +6,10 @@ coverage/
 .env.*
 uploads/
 prisma/node_modules/
+.vercel/
 .DS_Store
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 node_modules/
 .env
-package-lock.json
