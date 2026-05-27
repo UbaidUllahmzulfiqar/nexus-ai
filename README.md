@@ -78,9 +78,16 @@ npm test
 
 ## Deployment Notes
 
-- Set production environment variables in Vercel or your host.
+- Set `DATABASE_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GITHUB_ID`, and `GITHUB_SECRET` in your production host.
 - Keep `ALLOW_DEV_BOOTSTRAP_CONTEXT=false` in production.
+- Set `APP_JWT_SECRET` and `INTERNAL_AUTH_SECRET` to strong, private values.
+- Optionally set `OPENAI_API_KEY`, `OPENAI_MODEL`, and `OPENAI_BASE_URL` for AI summaries and grounded chat.
 - Run `npx prisma db push` only against the intended PostgreSQL database.
+- The Vercel deployment can use the included [vercel.json](vercel.json).
+
+## Health Check
+
+- `GET /api/health` returns a simple JSON status payload for uptime checks.
 
 ## Release Notes
 
@@ -98,3 +105,11 @@ npm test
 - Monitoring and rate limiting hardening
 - Final UX polish
 - Production deployment and release automation
+
+### Launch Checklist
+
+- Verify production environment variables in the host dashboard.
+- Confirm Prisma points at the production PostgreSQL database.
+- Confirm NextAuth sign-in redirects work on the deployed domain.
+- Confirm the health endpoint returns `200`.
+- Confirm build, test, and migration steps are documented before release.

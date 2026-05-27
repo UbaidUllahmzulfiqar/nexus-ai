@@ -1,8 +1,9 @@
 import GithubProvider from 'next-auth/providers/github';
+import type { AuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from './prisma';
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GithubProvider({
@@ -11,8 +12,25 @@ export const authOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET ?? process.env.APP_JWT_SECRET,
+  useSecureCookies: process.env.NODE_ENV === 'production',
   session: {
     strategy: 'database',
+  },
+  pages: {
+    signIn: '/login',
+  },
+  callbacks: {
+    redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+
+      return baseUrl;
+    },
   },
 };
 
