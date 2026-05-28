@@ -7,8 +7,33 @@ on:
     branches: [main]
 
 jobs:
-  lint_test_build:
+  build_test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nexus_ai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nexus_ai"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nexus_ai
+      NEXTAUTH_SECRET: ci-nextauth-secret
+      APP_JWT_SECRET: ci-app-jwt-secret
+      NEXTAUTH_URL: http://localhost:3000
+      STRIPE_SECRET_KEY: sk_test_ci
+      STRIPE_WEBHOOK_SECRET: whsec_ci
+      OPENAI_API_KEY: sk-ci
+      OPENAI_MODEL: gpt-4o-mini
+      GITHUB_ID: github-id
+      GITHUB_SECRET: github-secret
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js
@@ -17,8 +42,8 @@ jobs:
           node-version: 20
       - name: Install deps
         run: npm ci
-      - name: Lint
-        run: npm run lint
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
       - name: Test
         run: npm test
       - name: Build

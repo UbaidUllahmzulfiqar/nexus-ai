@@ -35,10 +35,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: npx prisma generate
-      - name: Push DB schema
+      - name: Deploy DB schema
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-        run: npx prisma db push
+        run: npx prisma migrate deploy
       - name: Build
         run: npm run build
       - name: Start server

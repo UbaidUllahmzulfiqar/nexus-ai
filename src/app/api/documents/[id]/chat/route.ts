@@ -3,6 +3,7 @@ import type { AuthOptions } from 'next-auth';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '../../../../../lib/authOptions';
 import { resolveDashboardContext } from '../../../../../lib/dashboard-context';
+import { requirePremiumWorkspace } from '../../../../../lib/billing';
 import {
   ensureDocumentConversation,
   getDocumentChatThread,
@@ -25,10 +26,21 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const { id } = await params;
   const context = await resolveDashboardContext(session.user.email);
+  const isPremiumWorkspace = await requirePremiumWorkspace(context.workspaceId);
   const thread = await getDocumentChatThread(context.workspaceId, id);
 
   if (!thread) {
     return NextResponse.json({ ok: false, error: 'Document not found.' }, { status: 404 });
+  }
+
+  if (!isPremiumWorkspace) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: 'Document chat is available on a paid workspace plan.',
+      },
+      { status: 402 }
+    );
   }
 
   if (thread.document.status !== 'COMPLETE' || !thread.document.content) {

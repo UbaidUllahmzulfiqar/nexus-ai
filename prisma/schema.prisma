@@ -30,6 +30,12 @@ model Workspace {
   name          String
   slug          String            @unique
   description   String?
+  subscriptionTier SubscriptionTier @default(FREE)
+  subscriptionStatus SubscriptionStatus @default(INACTIVE)
+  stripeCustomerId String?         @unique
+  stripeSubscriptionId String?      @unique
+  stripePriceId   String?
+  currentPeriodEnd DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   ownerId       String
@@ -114,6 +120,20 @@ enum DocumentStatus {
 enum MessageRole {
   USER
   ASSISTANT
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  TEAM
+}
+
+enum SubscriptionStatus {
+  INACTIVE
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
 }
 
 model Account {

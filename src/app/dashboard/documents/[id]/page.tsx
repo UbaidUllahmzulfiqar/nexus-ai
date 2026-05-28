@@ -59,6 +59,10 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
   }
 
   const { document, messages } = thread;
+  const isPremiumEnabled =
+    process.env.NODE_ENV !== 'production' ||
+    context.subscriptionStatus === 'ACTIVE' ||
+    context.subscriptionStatus === 'TRIALING';
 
   const preview =
     document.content?.slice(0, 2000).trim() ||
@@ -171,6 +175,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
       <DocumentChatPanel
         documentId={document.id}
         documentStatus={document.status}
+        isPremiumEnabled={isPremiumEnabled}
         documentTitle={document.title}
         initialMessages={messages.map((message) => ({
           ...message,

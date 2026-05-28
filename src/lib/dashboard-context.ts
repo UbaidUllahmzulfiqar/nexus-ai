@@ -9,6 +9,8 @@ type DashboardContext = {
   workspaceId: string;
   workspaceSlug: string;
   workspaceName: string;
+  subscriptionTier: 'FREE' | 'PRO' | 'TEAM';
+  subscriptionStatus: 'INACTIVE' | 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED';
 };
 
 export async function resolveDashboardContext(userEmail: string): Promise<DashboardContext> {
@@ -30,7 +32,14 @@ export async function resolveDashboardContext(userEmail: string): Promise<Dashbo
   const workspace =
     (await prisma.workspace.findUnique({
       where: { slug: DEFAULT_WORKSPACE_SLUG },
-      select: { id: true, slug: true, name: true, ownerId: true },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        ownerId: true,
+        subscriptionTier: true,
+        subscriptionStatus: true,
+      },
     })) ??
     (await prisma.workspace.create({
       data: {
@@ -38,7 +47,14 @@ export async function resolveDashboardContext(userEmail: string): Promise<Dashbo
         slug: DEFAULT_WORKSPACE_SLUG,
         ownerId: user.id,
       },
-      select: { id: true, slug: true, name: true, ownerId: true },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        ownerId: true,
+        subscriptionTier: true,
+        subscriptionStatus: true,
+      },
     }));
 
   if (workspace.ownerId === user.id) {
@@ -79,6 +95,8 @@ export async function resolveDashboardContext(userEmail: string): Promise<Dashbo
     workspaceId: workspace.id,
     workspaceSlug: workspace.slug,
     workspaceName: workspace.name,
+    subscriptionTier: workspace.subscriptionTier,
+    subscriptionStatus: workspace.subscriptionStatus,
   };
 }
 

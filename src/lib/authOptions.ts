@@ -2,6 +2,7 @@ import GithubProvider from 'next-auth/providers/github';
 import type { AuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from './prisma';
+import { getNextAuthSecret } from './next-auth-secret';
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -11,7 +12,7 @@ export const authOptions: AuthOptions = {
       clientSecret: process.env.GITHUB_SECRET ?? '',
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET ?? process.env.APP_JWT_SECRET,
+  secret: getNextAuthSecret(),
   useSecureCookies: process.env.NODE_ENV === 'production',
   session: {
     strategy: 'database',

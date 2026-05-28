@@ -1,6 +1,7 @@
 import { normalizeWhitespace } from './document-processing';
 import { prisma } from './prisma';
 import { verifyToken } from './auth';
+import { getNextAuthSecret } from './next-auth-secret';
 import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
 
@@ -45,7 +46,7 @@ async function resolveRequestedContext(request: Request) {
   try {
     const token = await getToken({
       req: request as unknown as NextRequest,
-      secret: process.env.NEXTAUTH_SECRET,
+      secret: getNextAuthSecret(),
     });
     if (token && typeof token === 'object') {
       const requestedEmail = normalizeWhitespace(String(token['email'] ?? '')).toLowerCase();

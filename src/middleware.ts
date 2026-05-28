@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { getNextAuthSecret } from './lib/next-auth-secret';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/api/auth'];
 
@@ -13,7 +14,7 @@ export async function middleware(req: NextRequest) {
 
   // protect dashboard and app routes
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/app')) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const token = await getToken({ req, secret: getNextAuthSecret() });
     if (!token) {
       const url = req.nextUrl.clone();
       url.pathname = '/login';

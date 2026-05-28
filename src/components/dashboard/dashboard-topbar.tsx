@@ -25,6 +25,9 @@ export function DashboardTopbar({
       </div>
 
       <div className="dashboard-topbar-actions">
+        <Link className="ghost-button dashboard-topbar-link" href="/pricing">
+          Billing
+        </Link>
         <Link className="ghost-button dashboard-topbar-link" href="/">
           Public site
         </Link>

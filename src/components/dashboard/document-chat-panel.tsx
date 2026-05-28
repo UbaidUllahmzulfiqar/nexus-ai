@@ -14,6 +14,7 @@ type DocumentChatPanelProps = {
   documentId: string;
   documentTitle: string;
   documentStatus: 'UPLOADED' | 'PROCESSING' | 'COMPLETE' | 'FAILED';
+  isPremiumEnabled: boolean;
   initialMessages: ChatMessage[];
 };
 
@@ -21,6 +22,7 @@ export function DocumentChatPanel({
   documentId,
   documentTitle,
   documentStatus,
+  isPremiumEnabled,
   initialMessages,
 }: DocumentChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -29,9 +31,13 @@ export function DocumentChatPanel({
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const isReady = documentStatus === 'COMPLETE';
+  const isReady = documentStatus === 'COMPLETE' && isPremiumEnabled;
 
   const statusCopy = useMemo(() => {
+    if (!isPremiumEnabled) {
+      return 'Upgrade the workspace to unlock AI chat over this document.';
+    }
+
     if (documentStatus === 'COMPLETE') {
       return 'Ask a grounded question about the extracted document content.';
     }
@@ -45,7 +51,7 @@ export function DocumentChatPanel({
     }
 
     return 'Chat unlocks once the document is processed.';
-  }, [documentStatus]);
+  }, [documentStatus, isPremiumEnabled]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -145,7 +151,7 @@ export function DocumentChatPanel({
           <p className="section-copy">{statusCopy}</p>
         </div>
         <span className={`tag ${isReady ? 'chat-ready' : 'chat-disabled'}`}>
-          {isReady ? 'Ready' : documentStatus}
+          {isPremiumEnabled ? (isReady ? 'Ready' : documentStatus) : 'Upgrade required'}
         </span>
       </div>
 
@@ -196,15 +202,30 @@ export function DocumentChatPanel({
           <div>
             <strong>{isSending ? 'Streaming answer…' : 'Ready to answer'}</strong>
             <span>
-              {isReady
-                ? 'Uses the extracted text stored in the database.'
-                : 'Wait for processing to finish.'}
+              {isPremiumEnabled
+                ? isReady
+                  ? 'Uses the extracted text stored in the database.'
+                  : 'Wait for processing to finish.'
+                : 'Enable a paid plan to unlock AI chat.'}
             </span>
           </div>
-          <button className="button" disabled={!isReady || isSending} type="submit">
+          <button
+            className="button"
+            disabled={!isReady || !isPremiumEnabled || isSending}
+            type="submit"
+          >
             {isSending ? 'Sending…' : 'Send question'}
           </button>
         </div>
+
+        {!isPremiumEnabled ? (
+          <div className="chat-upgrade-banner">
+            <p>Document chat is a premium feature in production.</p>
+            <a className="button" href="/pricing">
+              Upgrade workspace
+            </a>
+          </div>
+        ) : null}
       </form>
     </section>
   );
